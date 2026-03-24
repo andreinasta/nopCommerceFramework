@@ -1,4 +1,3 @@
-import { ProductListPage } from "@pages/productList.page";
 import { test, expect } from "../../fixtures/base.fixtures";
 
 test.describe("Product - Search", () => {
@@ -72,14 +71,13 @@ test.describe("Product - Category Navigation", () => {
 });
 
 test.describe("Product - Sort & Display", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/cell-phones");
+  });
   test("Sort by price low to high and check order", async ({
     productListPage,
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Computers" }).hover();
-    await page.getByRole("button", { name: "Notebooks" }).click();
-
     await productListPage.sortByDropdown.selectOption({
       label: "Price: Low to High",
     });
@@ -106,10 +104,6 @@ test.describe("Product - Sort & Display", () => {
     productListPage,
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Computers" }).hover();
-    await page.getByRole("button", { name: "Notebooks" }).click();
-
     await productListPage.sortByDropdown.selectOption({
       label: "Price: High to Low",
     });
@@ -136,9 +130,6 @@ test.describe("Product - Sort & Display", () => {
     productListPage,
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Computers" }).hover();
-    await page.getByRole("button", { name: "Notebooks" }).click();
     await productListPage.sortByDropdown.selectOption({
       label: "Name: Z to A",
     });
@@ -160,9 +151,6 @@ test.describe("Product - Sort & Display", () => {
     productListPage,
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Computers" }).hover();
-    await page.getByRole("button", { name: "Notebooks" }).click();
     await productListPage.displayPerPageDropdown.selectOption({
       label: "3",
     });
@@ -173,7 +161,6 @@ test.describe("Product - Sort & Display", () => {
     productListPage,
     page,
   }) => {
-    await page.goto("/notebooks");
     await productListPage.listViewBtn.click();
     await expect(productListPage.listViewBtn).toHaveClass(/selected/);
     await expect(page).toHaveURL(/viewmode=list/);
@@ -182,9 +169,114 @@ test.describe("Product - Sort & Display", () => {
     await expect(page).toHaveURL(/viewmode=grid/);
   });
 
-  test("asd", async ({ productListPage, page }) => {});
+  test("Check pagination", async ({ productListPage, page }) => {
+    await expect(productListPage.pagerCurrentPage).toHaveText("1");
 
-  test("2asd", async ({ productListPage, page }) => {});
+    // Save page 1 product names
+    const page1Products = await productListPage.productCards
+      .locator(".product-title a")
+      .allTextContents();
 
-  test("3asd", async ({ productListPage, page }) => {});
+    // Click page 2
+    await productListPage.getPagerLink(2).click();
+    await expect(productListPage.pagerCurrentPage).toHaveText("2");
+
+    // Verify different products are shown
+    const page2Products = await productListPage.productCards
+      .locator(".product-title a")
+      .allTextContents();
+    expect(page2Products).not.toEqual(page1Products);
+
+    // Test next button — go back to page 1 first, then use next
+    await productListPage.getPagerLink(1).click();
+    await productListPage.pagerNext.click();
+    await expect(productListPage.pagerCurrentPage).toHaveText("2");
+  });
+});
+
+test.describe("Product Card Actions", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/cell-phones");
+  });
+  test("Click on Product Card and navigate to Product Detail page", async ({
+    productListPage,
+    page,
+  }) => {
+    const href = await productListPage
+      .getProductByName("Apple iPhone 16 128GB")
+      .locator(".product-title a")
+      .getAttribute("href");
+    await productListPage.getProductByName("Apple iPhone 16 128GB").click();
+    await expect(page).toHaveURL(href!);
+    await expect(productListPage.breadcrumb).toContainText(
+      "Apple iPhone 16 128GB",
+    );
+  });
+
+  test("Add product to cart and verify top confirmation message", async ({
+    basePage,
+    page,
+    productListPage,
+  }) => {
+    const firstProduct = productListPage.productCards.first();
+    const productName = await firstProduct
+      .locator(".product-title a")
+      .innerText();
+    await firstProduct.getByRole("button", { name: "Add to cart" }).click();
+    await expect(basePage.addedToCartMsg).toBeVisible();
+    await basePage.cartLink.hover();
+    await expect(page.locator(".flyout-cart .name")).toContainText(productName);
+  });
+
+  test("Add two products to Compare feature and check Comparison Page", async ({
+    productListPage,
+    page,
+    basePage,
+  }) => {
+    const firstName = await productListPage.productCards
+      .nth(0)
+      .locator(".product-title a")
+      .innerText();
+    const secondName = await productListPage.productCards
+      .nth(1)
+      .locator(".product-title a")
+      .innerText();
+
+    await productListPage.getProductCompareBtn(firstName).click();
+    await expect(basePage.addedToCompareMsg).toBeVisible();
+    await basePage.addedToCompareMsg.waitFor({ state: "hidden" });
+    await productListPage.getProductCompareBtn(secondName).click();
+    await expect(basePage.addedToCompareMsg).toBeVisible();
+    await page.goto("/compareproducts");
+    await expect(page.locator(".compare-products-table")).toContainText(
+      firstName,
+    );
+    await expect(page.locator(".compare-products-table")).toContainText(
+      secondName,
+    );
+  });
+
+  test("Add two products to Wishlist feature and check Wishlist Page", async ({
+    productListPage,
+    page,
+    basePage,
+  }) => {
+    const firstName = await productListPage.productCards
+      .nth(0)
+      .locator(".product-title a")
+      .innerText();
+    const secondName = await productListPage.productCards
+      .nth(1)
+      .locator(".product-title a")
+      .innerText();
+    await productListPage.getProductWishlistBtn(firstName).click();
+    await expect(basePage.addedToWishlistMsg).toBeVisible();
+    await basePage.addedToWishlistMsg.waitFor({ state: "hidden" });
+    await productListPage.getProductWishlistBtn(secondName).click();
+    await expect(basePage.addedToWishlistMsg).toBeVisible();
+    await page.goto("/wishlist");
+    await expect(page.locator(".wishlist-content .product-name")).toContainText(
+      [firstName, secondName],
+    );
+  });
 });

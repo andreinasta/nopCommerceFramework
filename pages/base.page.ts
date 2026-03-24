@@ -5,7 +5,10 @@ export class BasePage {
 
   // Header - Common
   readonly cartLink: Locator;
-  readonly wishlistLink: Locator;
+  readonly addedToCompareMsg: Locator;
+  readonly addedToCartMsg: Locator;
+  readonly addedToWishlistMsg: Locator;
+
   readonly searchField: Locator;
   readonly searchBtn: Locator;
 
@@ -24,8 +27,19 @@ export class BasePage {
     this.page = page;
 
     //Header - Common
-    this.cartLink = page.getByRole("link", { name: "Shopping cart" });
-    this.wishlistLink = page.getByRole("link", { name: "Wishlist" });
+    this.cartLink = page.getByRole("link", {
+      name: "Shopping cart",
+      exact: true,
+    });
+    this.addedToCartMsg = page.locator("div").filter({
+      hasText: /^The product has been added to your shopping cart$/,
+    });
+    this.addedToCompareMsg = page.locator("div").filter({
+      hasText: /^The product has been added to your product comparison$/,
+    });
+    this.addedToWishlistMsg = page
+      .locator("div")
+      .filter({ hasText: /^The product has been added to your wishlist$/ });
     this.searchField = page.getByRole("textbox", { name: "Search store" });
     this.searchBtn = page.getByRole("button", { name: "Search" });
 
