@@ -154,6 +154,7 @@ test.describe("Product - Sort & Display", () => {
     await productListPage.displayPerPageDropdown.selectOption({
       label: "3",
     });
+    await page.waitForLoadState("networkidle");
     await expect(productListPage.productCards).toHaveCount(3);
   });
 
